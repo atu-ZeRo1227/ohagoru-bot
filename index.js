@@ -21,7 +21,7 @@ const client = new Client({
 });
 
 // ===== 設定 =====
-const BOT_TOKEN = 'MTQ1NDc1Mjg4MzI5ODc5NTY4MA.GQhg5p.YLBq8KEkft0ag8jpaHRqaMsf1GuE_o89KXVFbs';
+const TOKEN = process.env.DISCORD_TOKEN;
 const INPUT_CHANNEL_ID = '1454283599519154176';
 const POST_CHANNEL_ID = '1454283796147998863';
 const DATA_FILE = './reservations.json';
@@ -203,4 +203,5 @@ client.on(Events.InteractionCreate, async interaction => {
   }
 });
 
-client.login(process.env.BOT_TOKEN);
+
+client.login(TOKEN);
