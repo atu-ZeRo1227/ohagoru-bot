@@ -7,7 +7,8 @@ const {
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
-  Events
+  Events,
+  PermissionFlagsBits
 } = require('discord.js');
 const fs = require('fs');
 const http = require('http');
@@ -51,8 +52,32 @@ function saveData(data) {
 }
 
 // ---------- 起動 ----------
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`起動完了: ${client.user.tag}`);
+
+  // スラッシュコマンドの登録
+  const commands = [
+    {
+      name: 'reset',
+      description: 'ユーザーの予約回数をリセットします',
+      default_member_permissions: PermissionFlagsBits.Administrator.toString(),
+      options: [
+        {
+          name: 'user',
+          type: 6, // USER type
+          description: 'リセットするユーザー（指定しない場合は自分）',
+          required: false
+        }
+      ]
+    }
+  ];
+
+  try {
+    await client.application.commands.set(commands);
+    console.log('スラッシュコマンドを登録しました');
+  } catch (error) {
+    console.error('スラッシュコマンドの登録中にエラーが発生しました:', error);
+  }
 });
 
 // ---------- パネル ----------
@@ -73,6 +98,35 @@ client.on('messageCreate', async msg => {
 
 // ---------- インタラクション ----------
 client.on(Events.InteractionCreate, async interaction => {
+
+  // ===== スラッシュコマンド =====
+  if (interaction.isChatInputCommand()) {
+    if (interaction.commandName === 'reset') {
+      const targetUser = interaction.options.getUser('user') || interaction.user;
+      const data = loadData();
+
+      let count = 0;
+      const channel = await client.channels.fetch(POST_CHANNEL_ID).catch(() => null);
+
+      const newData = {};
+      for (const id in data) {
+        if (data[id].owner === targetUser.id) {
+          // 投稿されたメッセージを削除
+          if (channel && data[id].messageId) {
+            const msg = await channel.messages.fetch(data[id].messageId).catch(() => null);
+            if (msg) await msg.delete().catch(() => { });
+          }
+          count++;
+        } else {
+          newData[id] = data[id];
+        }
+      }
+
+      saveData(newData);
+      return interaction.reply({ content: `✅ ${targetUser.tag} の予約回数（${count}件）をリセットしました。`, ephemeral: true });
+    }
+  }
+
 
   // ===== 予約ボタン =====
   if (interaction.isButton() && interaction.customId === 'reserve') {
