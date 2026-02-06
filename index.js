@@ -10,6 +10,13 @@ const {
   Events
 } = require('discord.js');
 const fs = require('fs');
+const http = require('http');
+
+// Renderなどのホスティングサービスで起動し続けるための簡易サーバー
+http.createServer((req, res) => {
+  res.write('Bot is running!');
+  res.end();
+}).listen(process.env.PORT || 8080);
 
 const client = new Client({
   intents: [
@@ -31,7 +38,13 @@ const MAX_RESERVATIONS = 10;
 // ---------- データ ----------
 function loadData() {
   if (!fs.existsSync(DATA_FILE)) return {};
-  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+  try {
+    const data = fs.readFileSync(DATA_FILE, 'utf8');
+    return data ? JSON.parse(data) : {};
+  } catch (e) {
+    console.error('Data load error:', e);
+    return {};
+  }
 }
 function saveData(data) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
@@ -119,7 +132,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
     const post = await channel.send({
       content:
-`📅 お助け予約が入りました！
+        `📅 お助け予約が入りました！
 
 👤 予約者：<@${interaction.user.id}>
 📈 レベル：${data[id].level}
@@ -143,7 +156,7 @@ client.on(Events.InteractionCreate, async interaction => {
     await interaction.user.send({
       content: '✅ お助け予約が完了しました',
       components: [cancelRow]
-    }).catch(() => {});
+    }).catch(() => { });
 
     return interaction.deferUpdate();
   }
@@ -159,8 +172,8 @@ client.on(Events.InteractionCreate, async interaction => {
       saveData(data);
 
       const owner = await client.users.fetch(data[id].owner);
-      await owner.send(`✅ 参加者が来ました\nユーザー：${interaction.user.tag}`).catch(() => {});
-      await interaction.user.send('🟢 参加完了しました').catch(() => {});
+      await owner.send(`✅ 参加者が来ました\nユーザー：${interaction.user.tag}`).catch(() => { });
+      await interaction.user.send('🟢 参加完了しました').catch(() => { });
     }
     return interaction.deferUpdate();
   }
@@ -177,8 +190,8 @@ client.on(Events.InteractionCreate, async interaction => {
       saveData(data);
 
       const owner = await client.users.fetch(data[id].owner);
-      await owner.send(`❌ 参加者がキャンセルしました\nユーザー：${interaction.user.tag}`).catch(() => {});
-      await interaction.user.send('🔴 キャンセル完了しました').catch(() => {});
+      await owner.send(`❌ 参加者がキャンセルしました\nユーザー：${interaction.user.tag}`).catch(() => { });
+      await interaction.user.send('🔴 キャンセル完了しました').catch(() => { });
     }
     return interaction.deferUpdate();
   }
@@ -192,16 +205,19 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     const channel = await client.channels.fetch(POST_CHANNEL_ID);
-    const msg = await channel.messages.fetch(data[id].messageId).catch(() => {});
-    if (msg) await msg.delete().catch(() => {});
+    const msg = await channel.messages.fetch(data[id].messageId).catch(() => { });
+    if (msg) await msg.delete().catch(() => { });
 
     delete data[id];
     saveData(data);
 
-    await interaction.user.send('❌ 予約をキャンセルしました').catch(() => {});
+    await interaction.user.send('❌ 予約をキャンセルしました').catch(() => { });
     return interaction.deferUpdate();
   }
 });
 
-
-client.login(TOKEN);
+if (BOT_TOKEN) {
+  client.login(BOT_TOKEN);
+} else {
+  console.error('BOT_TOKEN is not set in environment variables.');
+}
