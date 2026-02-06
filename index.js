@@ -216,8 +216,4 @@ client.on(Events.InteractionCreate, async interaction => {
   }
 });
 
-if (BOT_TOKEN) {
-  client.login(BOT_TOKEN);
-} else {
-  console.error('BOT_TOKEN is not set in environment variables.');
-}
+client.login(TOKEN);
